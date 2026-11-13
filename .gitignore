@@ -1,0 +1,7 @@
+.env
+config/config.yaml
+logs/
+storage/
+PUBLIC_URL.txt
+__pycache__/
+*.pyc

@@ -1,0 +1,16 @@
+[Unit]
+Description=AQ Mask Gateway
+After=network.target aq-polli.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/aq-relay/gateway
+EnvironmentFile=-/opt/aq-relay/.env
+ExecStart=/usr/bin/python3 /opt/aq-relay/gateway/mask_gateway.py --port 8903
+Restart=always
+RestartSec=5
+StandardOutput=append:/opt/aq-relay/logs/mask.log
+StandardError=append:/opt/aq-relay/logs/mask.log
+
+[Install]
+WantedBy=multi-user.target

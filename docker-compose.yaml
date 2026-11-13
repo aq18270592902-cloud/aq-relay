@@ -1,0 +1,25 @@
+services:
+  chatnio:
+    image: programzmh/chatnio
+    container_name: chatnio
+    restart: always
+    network_mode: host
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    environment:
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_USER: chatnio
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DB: chatnio
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: "0"
+      SERVE_STATIC: "true"
+      TZ: Asia/Shanghai
+    volumes:
+      - ./config:/config
+      - ./logs:/logs
+      - ./storage:/storage

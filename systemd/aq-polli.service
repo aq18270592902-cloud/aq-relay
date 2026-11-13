@@ -1,0 +1,16 @@
+[Unit]
+Description=AQ Pollinations Bridge
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/aq-relay/gateway
+EnvironmentFile=-/opt/aq-relay/.env
+ExecStart=/usr/bin/python3 /opt/aq-relay/gateway/pollinations_bridge.py --port 8899
+Restart=always
+RestartSec=5
+StandardOutput=append:/opt/aq-relay/logs/polli.log
+StandardError=append:/opt/aq-relay/logs/polli.log
+
+[Install]
+WantedBy=multi-user.target
