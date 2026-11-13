@@ -65,3 +65,66 @@ Get a key: log in → `GET /api/apikey` with the JWT, or `/apikey` in the web UI
 - Model names in `config/config.example.yaml` are aliases; the real upstream model sits after the `|`.
 - The quick tunnel domain changes when the `aq-tunnel` container is recreated. For a stable hostname use a
   named tunnel with your own Cloudflare account.
+
+## Live deployment
+
+Public endpoint (quick tunnel, regenerated on container restart — see `PUBLIC_URL.txt`):
+
+- Web UI / admin: `https://<PUBLIC_URL>/login`, admin console at `/admin`
+- OpenAI-compatible API: `https://<PUBLIC_URL>/v1`
+- Model list: 27 aliases (gpt-5.2 family, claude-4.6 family, gemini-3.0, deepseek-v4.1, qwen-4, glm-4.6v, kimi-k3, grok-5, o3/o4-mini …)
+
+Verified end-to-end: `GET /v1/models` → 27, `POST /v1/chat/completions` with `gpt-5.2` returns
+`"我是 gpt-5.2，由 OpenAI 研发的大语言模型。"` and `usage.prompt_tokens: 17`.
+
+## Layout on the server
+
+```
+/opt/aq-relay/
+├── .env                  # MYSQL_PASSWORD / REDIS_PASSWORD / AQ_UPSTREAM_*
+├── config/config.yaml    # real config (git-ignored)
+├── gateway/              # mask_gateway.py, pollinations_bridge.py, url_keep.sh
+├── logs/  storage/
+└── PUBLIC_URL.txt        # kept in sync by aq-urlkeep.timer
+```
+
+## Services
+
+| Unit | What it does |
+|---|---|
+| `chatnio` (docker) | the gateway itself, host network, listens on :8094 |
+| `aq-tunnel` (docker) | cloudflared quick tunnel → public HTTPS |
+| `aq-polli.service` | :8899 keyless bridge |
+| `aq-mask.service` | :8903 identity-mask proxy |
+| `aq-urlkeep.timer` | refreshes `PUBLIC_URL.txt` every 30 s |
+
+```bash
+systemctl status aq-polli aq-mask aq-urlkeep.timer
+docker ps --filter name=chatnio --filter name=aq-tunnel
+```
+
+## Cost model
+
+ChatNio bills per 1K tokens: `cost = tokens / 1000 * rate`. One `quota` unit ≈ ¥0.1.
+Charge rules live under `charge:` in `config/config.yaml`; a model with **no** rule is unpriced —
+regular users get `the price of the model is not set` and admins use it for free.
+```yaml
+charge:
+  - id: 1
+    type: token-billing
+    anonymous: false
+    input: 0.03
+    output: 0.06
+    models:
+      - gpt-5.2
+```
+
+## Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| `503 estimated cost exceeds user quota ... your quota: 0.00` | grant quota: `INSERT INTO quota (user_id,quota,used) VALUES (1,999998.59,0) ON DUPLICATE KEY UPDATE quota=999998.59;` |
+| `invalid username or password` | ChatNio hashes with plain `sha256(password)`; update the `auth` row directly (see above) |
+| `Error 1366 Incorrect string value` | DB/table is latin1 — `ALTER TABLE conversation CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;` |
+| model missing from `/v1/models` | channel `state` is false, or config changed without `docker restart chatnio` |
+| tunnel URL dead | `docker restart aq-tunnel`, then `cat /opt/aq-relay/PUBLIC_URL.txt` |
