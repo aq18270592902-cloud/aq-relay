@@ -26,7 +26,9 @@ fi
 sed -i "s|__MYSQL_PASSWORD__|$MYSQL_PASSWORD|g; s|__REDIS_PASSWORD__|$REDIS_PASSWORD|g" config/config.yaml
 
 echo "[3/6] installing bridge services"
-cp systemd/aq-polli.service systemd/aq-mask.service /etc/systemd/system/
+cp systemd/aq-polli.service systemd/aq-mask.service \
+   systemd/aq-urlkeep.service systemd/aq-urlkeep.timer /etc/systemd/system/
+chmod +x gateway/url_keep.sh
 systemctl daemon-reload
 systemctl enable --now aq-polli aq-mask
 sleep 2
@@ -47,6 +49,9 @@ docker run -d --name aq-tunnel --restart always --network host \
 sleep 15
 URL=$(docker logs aq-tunnel 2>&1 | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1)
 echo "$URL" > PUBLIC_URL.txt
+sed -i "s|__PUBLIC_URL__|$URL|g" config/config.yaml
+docker restart chatnio >/dev/null
+systemctl enable --now aq-urlkeep.timer
 echo
 echo "PUBLIC URL: $URL"
 echo "first-boot root password:  docker logs chatnio 2>&1 | grep 'creating root user'"

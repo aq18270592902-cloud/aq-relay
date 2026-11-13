@@ -1,0 +1,10 @@
+[Unit]
+Description=Run AQ public URL keeper every 30s
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+Unit=aq-urlkeep.service
+
+[Install]
+WantedBy=timers.target

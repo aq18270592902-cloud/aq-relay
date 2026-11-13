@@ -1,0 +1,7 @@
+[Unit]
+Description=AQ public URL keeper
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/aq-relay/gateway/url_keep.sh
